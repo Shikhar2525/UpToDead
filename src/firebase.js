@@ -11,11 +11,32 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+const requiredKeys = [
+  'apiKey',
+  'authDomain',
+  'projectId',
+  'storageBucket',
+  'messagingSenderId',
+  'appId',
+];
+
+const missingFirebaseKeys = requiredKeys.filter((key) => !firebaseConfig[key]);
+
+export const firebaseConfigError = missingFirebaseKeys.length
+  ? `Missing Firebase environment variables: ${missingFirebaseKeys
+      .map((key) => `VITE_FIREBASE_${key.replace(/([A-Z])/g, '_$1').toUpperCase()}`)
+      .join(', ')}.`
+  : '';
+
+const app = firebaseConfigError ? null : initializeApp(firebaseConfig);
+export const auth = app ? getAuth(app) : null;
+export const db = app ? getFirestore(app) : null;
 
 export async function ensureAnonymousAuth() {
+  if (!auth) {
+    throw new Error(firebaseConfigError || 'Firebase is not configured.');
+  }
+
   if (!auth.currentUser) {
     await signInAnonymously(auth);
   }

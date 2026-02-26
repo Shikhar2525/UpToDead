@@ -7,7 +7,7 @@ import {
   query,
   serverTimestamp,
 } from 'firebase/firestore';
-import { db, ensureAnonymousAuth } from './firebase';
+import { db, ensureAnonymousAuth, firebaseConfigError } from './firebase';
 
 function getWeekKey(date = new Date()) {
   const tempDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -60,13 +60,20 @@ export default function App() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (firebaseConfigError) {
+      setError(firebaseConfigError);
+      return undefined;
+    }
+
     ensureAnonymousAuth().catch((authError) => {
       setError(authError.message);
     });
+
+    return undefined;
   }, []);
 
   useEffect(() => {
-    if (!activeTeam) {
+    if (!db || !activeTeam) {
       return undefined;
     }
 
@@ -107,6 +114,11 @@ export default function App() {
       return;
     }
 
+    if (!db) {
+      setError(firebaseConfigError || 'Firebase is not configured.');
+      return;
+    }
+
     const teamRef = await addDoc(collection(db, 'teams'), {
       name: teamName.trim(),
       createdAt: serverTimestamp(),
@@ -121,6 +133,11 @@ export default function App() {
     setError('');
     if (!activeTeam) {
       setError('Create a team first.');
+      return;
+    }
+
+    if (!db) {
+      setError(firebaseConfigError || 'Firebase is not configured.');
       return;
     }
 
@@ -143,6 +160,11 @@ export default function App() {
     setError('');
     if (!activeTeam) {
       setError('Create a team first.');
+      return;
+    }
+
+    if (!db) {
+      setError(firebaseConfigError || 'Firebase is not configured.');
       return;
     }
 
